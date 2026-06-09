@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>MovieEvent schema v1 — movie-events topic</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --bg-card-2: #263449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --purple: #c084fc;
+    --pink: #f472b6;
+    --orange: #fb923c;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+  }
+  h1 .ver {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 10px;
+    background: var(--accent);
+    color: #0f172a;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .meta-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .meta-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .meta-value {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin: 32px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ---- record visualization ---- */
+  .record {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .record-head {
+    padding: 14px 20px;
+    background: linear-gradient(90deg, #1e293b 0%, #263449 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .record-head .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--purple);
+    color: #0f172a;
+  }
+  .record-head .name {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 16px;
+    color: var(--text);
+  }
+  .record-head .ns {
+    color: var(--text-dim);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  .field {
+    display: grid;
+    grid-template-columns: 24px 200px 220px 80px 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .field:last-child { border-bottom: none; }
+  .field:hover { background: rgba(56, 189, 248, 0.04); }
+  .field-icon {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    color: #0f172a;
+  }
+  .field-name {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .field-name .key-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    background: var(--yellow);
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 3px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+  }
+  .field-type {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  .field-type .nullable {
+    color: var(--orange);
+  }
+  .field-required {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .required-yes { color: var(--red); }
+  .required-no  { color: var(--text-dim); }
+  .field-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .field-desc code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: rgba(56, 189, 248, 0.1);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  /* ---- enums ---- */
+  .enums {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .enum-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .enum-card h3 {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  .enum-card h3 .type {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    background: var(--purple);
+    color: #0f172a;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+  .enum-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .enum-value {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-card-2);
+  }
+  .enum-value .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* ---- example json ---- */
+  pre.json {
+    background: #0b1220;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 0;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .j-key   { color: var(--pink); }
+  .j-str   { color: var(--green); }
+  .j-num   { color: var(--orange); }
+  .j-null  { color: var(--text-dim); font-style: italic; }
+  .j-enum  { color: var(--purple); }
+
+  /* ---- flow diagram ---- */
+  .flow {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .flow-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr 40px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .flow-node {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .flow-node .title {
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .flow-node .sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  .flow-arrow {
+    font-size: 24px;
+    color: var(--accent);
+    text-align: center;
+  }
+  .partitions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    justify-content: center;
+  }
+  .partition {
+    flex: 1;
+    background: #0b1220;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    text-align: center;
+  }
+  .partition .p-label {
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .partition .p-hash {
+    color: var(--accent);
+  }
+  .hint {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .hint strong { color: var(--accent); }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>
+    MovieEvent
+    <span class="ver">v1</span>
+  </h1>
+  <div class="subtitle">
+    User activity event produced by the Movie Service.
+    Published to Kafka topic <code>movie-events</code> in Avro format.
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Topic</div>
+      <div class="meta-value">movie-events</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Format</div>
+      <div class="meta-value">Avro</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Schema Registry subject</div>
+      <div class="meta-value">movie-events-value</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Partitions</div>
+      <div class="meta-value">3</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Replication factor</div>
+      <div class="meta-value">2</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Partition key</div>
+      <div class="meta-value">user_id</div>
+    </div>
+  </div>
+
+  <!-- ================== record ================== -->
+  <div class="section-title">Record fields</div>
+
+  <div class="record">
+    <div class="record-head">
+      <span class="badge">record</span>
+      <span class="name">MovieEvent</span>
+      <span class="ns">&middot; com.cinema.events</span>
+    </div>
+
+    <!-- event_id -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--purple)">ID</div>
+      <div class="field-name">event_id</div>
+      <div class="field-type">string <span style="color: var(--text-dim)">(UUID v4)</span></div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Уникальный идентификатор события. Пример: <code>5d5ce838-a5da-4db9-a371-f4109b8ff937</code></div>
+    </div>
+
+    <!-- user_id -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--yellow)">U</div>
+      <div class="field-name">
+        user_id
+        <span class="key-badge">partition key</span>
+      </div>
+      <div class="field-type">string</div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Идентификатор пользователя. Выбран как ключ партиционирования → события одного юзера в одной партиции → гарантия порядка.</div>
+    </div>
+
+    <!-- movie_id -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--pink)">M</div>
+      <div class="field-name">movie_id</div>
+      <div class="field-type">string</div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Идентификатор фильма. Пример: <code>movie_012</code>.</div>
+    </div>
+
+    <!-- event_type -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--green)">E</div>
+      <div class="field-name">event_type</div>
+      <div class="field-type">EventType <span style="color: var(--text-dim)">(enum)</span></div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Тип действия. Определяет, требуется ли <code>progress_seconds</code>.</div>
+    </div>
+
+    <!-- timestamp -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--accent)">T</div>
+      <div class="field-name">timestamp</div>
+      <div class="field-type">long <span style="color: var(--text-dim)">(epoch ms UTC)</span></div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Время события в UTC, миллисекунды с 1970-01-01. Пример: <code>1776969932692</code>.</div>
+    </div>
+
+    <!-- device_type -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--orange)">D</div>
+      <div class="field-name">device_type</div>
+      <div class="field-type">DeviceType <span style="color: var(--text-dim)">(enum)</span></div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Категория устройства пользователя.</div>
+    </div>
+
+    <!-- session_id -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--purple)">S</div>
+      <div class="field-name">session_id</div>
+      <div class="field-type">string</div>
+      <div class="field-required required-yes">required</div>
+      <div class="field-desc">Идентификатор сессии просмотра. Группирует связанные события (<code>VIEW_STARTED → VIEW_PAUSED → VIEW_FINISHED</code>).</div>
+    </div>
+
+    <!-- progress_seconds -->
+    <div class="field">
+      <div class="field-icon" style="background: var(--red)">P</div>
+      <div class="field-name">progress_seconds</div>
+      <div class="field-type">[<span class="nullable">null</span>, int]</div>
+      <div class="field-required required-no">optional</div>
+      <div class="field-desc">Позиция воспроизведения в секундах. Заполняется только для событий <code>VIEW_*</code>.</div>
+    </div>
+  </div>
+
+  <!-- ================== enums ================== -->
+  <div class="section-title">Enum types</div>
+
+  <div class="enums">
+    <div class="enum-card">
+      <h3>EventType <span class="type">enum</span></h3>
+      <div class="enum-values">
+        <div class="enum-value"><span class="dot" style="background: var(--green)"></span>VIEW_STARTED</div>
+        <div class="enum-value"><span class="dot" style="background: var(--accent)"></span>VIEW_FINISHED</div>
+        <div class="enum-value"><span class="dot" style="background: var(--yellow)"></span>VIEW_PAUSED</div>
+        <div class="enum-value"><span class="dot" style="background: var(--orange)"></span>VIEW_RESUMED</div>
+        <div class="enum-value"><span class="dot" style="background: var(--pink)"></span>LIKED</div>
+        <div class="enum-value"><span class="dot" style="background: var(--purple)"></span>SEARCHED</div>
+      </div>
+    </div>
+
+    <div class="enum-card">
+      <h3>DeviceType <span class="type">enum</span></h3>
+      <div class="enum-values">
+        <div class="enum-value"><span class="dot" style="background: var(--accent)"></span>MOBILE</div>
+        <div class="enum-value"><span class="dot" style="background: var(--green)"></span>DESKTOP</div>
+        <div class="enum-value"><span class="dot" style="background: var(--purple)"></span>TV</div>
+        <div class="enum-value"><span class="dot" style="background: var(--orange)"></span>TABLET</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================== example ================== -->
+  <div class="section-title">Example payload (JSON representation of Avro)</div>
+
+  <pre class="json">{
+  <span class="j-key">"event_id"</span>:         <span class="j-str">"5d5ce838-a5da-4db9-a371-f4109b8ff937"</span>,
+  <span class="j-key">"user_id"</span>:          <span class="j-str">"user_00231"</span>,
+  <span class="j-key">"movie_id"</span>:         <span class="j-str">"movie_012"</span>,
+  <span class="j-key">"event_type"</span>:       <span class="j-enum">"VIEW_STARTED"</span>,
+  <span class="j-key">"timestamp"</span>:        <span class="j-num">1776969932692</span>,
+  <span class="j-key">"device_type"</span>:      <span class="j-enum">"MOBILE"</span>,
+  <span class="j-key">"session_id"</span>:       <span class="j-str">"550e8400-e29b-41d4-a716-446655440000"</span>,
+  <span class="j-key">"progress_seconds"</span>: <span class="j-null">null</span>
+}</pre>
+
+  <!-- ================== flow ================== -->
+  <div class="section-title">Partitioning &amp; flow</div>
+
+  <div class="flow">
+    <div class="flow-row">
+      <div class="flow-node">
+        <div class="title">Producer</div>
+        <div class="sub">FastAPI service<br/>:8000</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="title">Kafka topic <code style="color:var(--accent)">movie-events</code></div>
+        <div class="sub">3 partitions · RF=2 · min ISR=1</div>
+        <div class="partitions">
+          <div class="partition"><span class="p-label">partition 0</span><span class="p-hash">hash(user_id)</span></div>
+          <div class="partition"><span class="p-label">partition 1</span><span class="p-hash">hash(user_id)</span></div>
+          <div class="partition"><span class="p-label">partition 2</span><span class="p-hash">hash(user_id)</span></div>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="title">ClickHouse consumer</div>
+        <div class="sub">Kafka engine table<br/>+ Materialized View</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      <strong>Выбор ключа:</strong> ключ партиционирования = <code>user_id</code>. Все события одного пользователя попадают в одну партицию → Kafka гарантирует порядок внутри сессии
+      (<code>VIEW_STARTED → VIEW_PAUSED → VIEW_RESUMED → VIEW_FINISHED</code>). Альтернатива <code>movie_id</code> создала бы «горячие» партиции для популярных фильмов.
+    </div>
+  </div>
+
+  <footer>
+    Schema Registry subject: <code>movie-events-value</code> · strategy: <code>TopicNameStrategy</code> · compatibility: <code>BACKWARD</code> (default) · source: <code>schemas/movie-event.avsc</code>
+  </footer>
+
+</div>
+</body>
+</html>

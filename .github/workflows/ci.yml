@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build producer image
+        run: docker build -t cinema-producer ./cinema-pipeline/producer
+
+      - name: Build aggregation image
+        run: docker build -t cinema-aggregation ./cinema-pipeline/aggregation
+
+      - name: Build tests image
+        run: docker build -t cinema-tests ./cinema-pipeline/tests
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r cinema-pipeline/tests/unit/requirements.txt
+
+      - name: Run unit tests
+        run: pytest cinema-pipeline/tests/unit/ -v --tb=short
+
+  integration-e2e-tests:
+    name: Integration & E2E tests
+    runs-on: ubuntu-latest
+    needs: [build, unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack and wait for healthy
+        working-directory: cinema-pipeline
+        run: docker compose up -d --wait --wait-timeout 180
+
+      - name: Run integration and E2E tests
+        working-directory: cinema-pipeline
+        run: docker compose --profile test run --rm tests
+
+      - name: Collect logs on failure
+        if: failure()
+        working-directory: cinema-pipeline
+        run: docker compose logs > /tmp/compose-logs.txt
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compose-logs
+          path: /tmp/compose-logs.txt
+
+      - name: Tear down
+        if: always()
+        working-directory: cinema-pipeline
+        run: docker compose down -v
+
+  load-tests:
+    name: Load tests + SLI metrics check
+    runs-on: ubuntu-latest
+    needs: integration-e2e-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack and wait for healthy
+        working-directory: cinema-pipeline
+        run: docker compose up -d --wait --wait-timeout 180
+
+      - name: Ensure results directory exists
+        run: mkdir -p cinema-pipeline/load-tests/results && chmod -R 777 cinema-pipeline/load-tests/results
+
+      - name: Run k6 load tests
+        working-directory: cinema-pipeline
+        run: docker compose --profile load-test run --rm k6
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results
+          path: cinema-pipeline/load-tests/results/
+
+      - name: Install requests for metrics check
+        run: pip install requests
+
+      - name: Check SLI metrics via Prometheus API
+        run: python cinema-pipeline/scripts/check_metrics.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrics-check-result
+          path: cinema-pipeline/scripts/metrics_check_result.json
+
+      - name: Tear down
+        if: always()
+        working-directory: cinema-pipeline
+        run: docker compose down -v

@@ -1,0 +1,5 @@
+pytest==8.2.0
+requests==2.31.0
+clickhouse-driver==0.2.9
+tenacity==8.3.0
+psycopg2-binary==2.9.9

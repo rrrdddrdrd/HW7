@@ -1,0 +1,10 @@
+{
+  "sli1_p95_latency_ms": 11.42,
+  "sli1_p95_latency_ok": true,
+  "sli2_error_rate_pct": 0.0,
+  "sli2_error_rate_ok": true,
+  "sli3_kafka_lag": 3,
+  "sli3_kafka_lag_ok": true,
+  "producer_up": true,
+  "producer_up_ok": true
+}

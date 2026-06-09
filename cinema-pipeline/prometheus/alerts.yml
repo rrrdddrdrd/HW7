@@ -1,0 +1,90 @@
+groups:
+  - name: cinema_service_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_request_errors_total[5m])) by (job)
+            /
+            sum(rate(http_requests_total[5m])) by (job)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: >
+            Error rate on {{ $labels.job }} is {{ $value | humanizePercentage }}
+            (threshold: 5%)
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (job, le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.job }}"
+          description: >
+            p95 latency on {{ $labels.job }} is {{ $value | humanizeDuration }}
+            (threshold: 1s)
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is unreachable"
+          description: "{{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumergroup_lag) by (consumergroup, topic) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag is high"
+          description: >
+            Consumer group {{ $labels.consumergroup }} on topic {{ $labels.topic }}
+            has lag {{ $value }} (threshold: 1000)
+
+  - name: cinema_slo_alerts
+    rules:
+      - alert: SLO_AvailabilityBreach
+        expr: |
+          (
+            1 - (
+              sum(rate(http_request_errors_total{job="producer"}[5m]))
+              /
+              sum(rate(http_requests_total{job="producer"}[5m]))
+            )
+          ) < 0.95
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: "SLO breach: producer availability below 95%"
+          description: >
+            Availability is {{ $value | humanizePercentage }}
+            (SLO: >99.5%, failure threshold: <95%)
+
+      - alert: SLO_LatencyBreach
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="producer"}[5m])) by (le)
+          ) > 1.0
+        for: 2m
+        labels:
+          severity: critical
+          slo: latency
+        annotations:
+          summary: "SLO breach: producer p95 latency above 1s"
+          description: >
+            p95 latency is {{ $value | humanizeDuration }}
+            (SLO: <500ms, failure threshold: >1s)
